@@ -1,0 +1,15 @@
+ContinuousStepper	KEYWORD1
+ContinuousStepper_Timer1	KEYWORD1
+ContinuousStepper_Timer3	KEYWORD1
+ContinuousStepper_TeensyTimerTool	KEYWORD1
+ContinuousStepper_Tone	KEYWORD1
+ContinuousStepper_AWF	KEYWORD1
+ContinuousStepper_KhoiH	KEYWORD1
+isSpinning	KEYWORD2
+powerOff	KEYWORD2
+powerOn	KEYWORD2
+setAcceleration	KEYWORD2
+setEnablePin	KEYWORD2
+speed	KEYWORD2
+spin	KEYWORD2
+stop	KEYWORD2
