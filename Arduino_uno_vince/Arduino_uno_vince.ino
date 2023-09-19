@@ -25,31 +25,29 @@ AccelStepper steppers[3];
 MultiStepper msteppers;
 
 int uddir = 1;
+int tempHoming = 0;   //maakt variabelen voor homing te cheken zodat het trager voor en achteruit gaat
 unsigned long lastMillis;
 bool b_move_complete = true;
-const byte limitSwitch_x = 9;   //pin for the limitswitch on CNC shield NC (PullUp)
-const byte limitSwitch_a = 12;  //pin for the limitswitch on CNC shield NC (PullUp)
+const byte limitSwitch_x = 9;   //pin for the limitswitch on CNC shield NC (PullUp) correct
+const byte limitSwitch_a = 11;  //pin for the limitswitch on CNC shield NC (PullUp) 
 const byte limitSwitch_y = 10;  //pin for the limitswitch on CNC shield NC (PullUp)
-const byte limitSwitch_z = 11;  //pin for the limitswitch on CNC shield NC (PullUp)
-
-//links beneden: Y+ : D10
-//Rechts beneden: Z+: D11
-//Rechts boven: SpnEn: D12
+const byte limitSwitch_z = 12;  //pin for the limitswitch on CNC shield NC (PullUp)
 
 
 bool switchFlipped = false; //stores the status for flipping
 bool previousFlip = true; //stores the previous state for flipping - needed for the direction change
 
-int lockx = 0;
-int locky = 0;
-int lockz = 0;
+int lockx = 0;    //maak een set reset variable voor motoren
+int locka = 0;    // a en x zijn de motoren beneden
+int locky = 0;    // motor voor links rechts
+int lockz = 0;    // motor voor camera
 
 long stepperPos[3] = {0, 0, 0};
 long stepsPerFullTurn[3] = {16000, 16000, 16000};
 
 void setup() {
-  steppers[0] = newStepper(3,6,8);
-  steppers[1] = newStepper(2,5,8);
+  steppers[0] = newStepper(2,5,8);
+  steppers[1] = newStepper(3,6,8);
   steppers[2] = newStepper(4,7,8);
 
   pinMode(8, OUTPUT);     //enable pin 8 hardcoden in pinMode
@@ -67,6 +65,7 @@ void setup() {
   SCmd.addCommand("STOP", stop_all);
   SCmd.addCommand("Home", homing);
   SCmd.addCommand("HomeZ", homingZ);
+  SCmd.addCommand("Homie", homie);
   SCmd.addCommand("Info", send_info);
   SCmd.addCommand("Pos", send_position);
   SCmd.addCommand("Ready", check_move_complete);
@@ -116,35 +115,31 @@ void send_position() {
 
 void limitswitch(){
 
- 
-  
-  if (digitalRead(limitSwitch_x) == 0 && lockx==0) {
-    steppers[0].setCurrentPosition(0);
-    stop_spec(0);
-    lockx = lockx+1;   
-    Serial.println("Switch 1");  
-    }
-  if (digitalRead(limitSwitch_y) == 0 && locky==0) {
-    steppers[1].setCurrentPosition(0);
-    stop_spec(1);
-    locky = locky+1;
-     Serial.println("Switch 2");
-    }
-  
-  if (digitalRead(limitSwitch_x) == 1 && lockx==1) {
-    steppers[0].setCurrentPosition(0);
-    stop_spec(0);
-    lockx = lockx-1;  
-    Serial.println("Switch 3");  
-    }
-  if (digitalRead(limitSwitch_y) == 1 && locky==1) {
-    steppers[1].setCurrentPosition(0);
-    stop_spec(1);
-    locky = locky-1;
-    Serial.println("Switch 4");
-    }
-
+  // rewrite this?
+  if (tempHoming == 0){
+    if (digitalRead(limitSwitch_x) == 1 && digitalRead(limitSwitch_a) == 1) 
+      {
+        stop_spec(0);
+        steppers[0].setCurrentPosition(0);
+      }
+    if (digitalRead(limitSwitch_y) == 1) 
+      {
+        stop_spec(1);
+        steppers[1].setCurrentPosition(0);
+      }
   }
+  if (tempHoming == 1){
+    if (digitalRead(limitSwitch_x) == 1 && digitalRead(limitSwitch_a) == 1) 
+      {
+        stop_spec(0);
+        steppers[0].setCurrentPosition(0);
+        stepperPos[0] = 50;
+        msteppers.moveTo(stepperPos);
+        delay(100);
+        tempHoming = 0; 
+      }
+      }
+}
 
 void change_velocity()    //function called when a Serial command is received
 {
@@ -204,6 +199,13 @@ void homing(){
   Serial.println("Home, x and y use -100000, other joints need angle turned to original reference (to be determined)");
   for (int i = 0; i < 3; i++) {steppers[i].move(-100000);}
   }
+
+void homie(){
+  Serial.println("Homie is is for x and a");
+  stepperPos[0] = -100000;
+  msteppers.moveTo(stepperPos);
+  tempHoming = 1;
+}
 
 void homingZ() {
   Serial.println("Homing x, y and z using move -100000");  // check dir
