@@ -9,12 +9,12 @@
 SerialCommand SCmd;                                 // The SerialCommand object
 //Sensors sensors;
 //Controller controller;
-AccelStepper newStepper(int stepPin, int dirPin, int enablePin) {
+AccelStepper newStepper(int stepPin, int dirPin, int enablePin, int maxSpeed, int Acceleration) {
   AccelStepper stepper = AccelStepper(stepper.DRIVER, stepPin,dirPin);
   stepper.setEnablePin(enablePin);
   stepper.setPinsInverted(false,false,true);
-  stepper.setMaxSpeed(500);
-  stepper.setAcceleration(1000);
+  stepper.setMaxSpeed(maxSpeed);
+  stepper.setAcceleration(Acceleration);
   stepper.enableOutputs();
   return stepper;
 }
@@ -22,7 +22,7 @@ AccelStepper newStepper(int stepPin, int dirPin, int enablePin) {
 
 AccelStepper steppers[3];
 
-MultiStepper msteppers;
+// MultiStepper msteppers;
 
 int uddir = 1;
 int tempHoming = 0;   //maakt variabelen voor homing te cheken zodat het trager voor en achteruit gaat
@@ -46,28 +46,29 @@ long stepperPos[3] = {0, 0, 0};
 long stepsPerFullTurn[3] = {16000, 16000, 16000};
 
 void setup() {
-  steppers[0] = newStepper(2,5,8);
-  steppers[1] = newStepper(3,6,8);
-  steppers[2] = newStepper(4,7,8);
+  // newStepper(int stepPin, int dirPin, int enablePin, int maxSpeed, int Acceleration)
+  steppers[0] = newStepper(2,5,8, 2000, 1500);
+  steppers[1] = newStepper(3,6,8, 1500, 1000);
+  steppers[2] = newStepper(4,7,8, 1500, 1000);
 
   pinMode(8, OUTPUT);     //enable pin 8 hardcoden in pinMode
   digitalWrite(8, LOW);
 
-  for (int i = 0; i < 3; i++){msteppers.addStepper(steppers[i]);}
+  // for (int i = 0; i < 3; i++){msteppers.addStepper(steppers[i]);}
 
   pinMode(limitSwitch_x, INPUT_PULLUP);
   pinMode(limitSwitch_a, INPUT_PULLUP);
   pinMode(limitSwitch_y, INPUT_PULLUP);
   pinMode(limitSwitch_z, INPUT_PULLUP);
 
+  // Max number of function is 10, so you can't add more functions ;-;
   SCmd.addCommand("M", move_stepper);
   SCmd.addCommand("V", change_velocity);
+  SCmd.addCommand("A", change_acceleration);
   SCmd.addCommand("STOP", stop_all);
   SCmd.addCommand("Home", homing);
   SCmd.addCommand("HomeZ", homingZ);
-  SCmd.addCommand("Homie", homie);
   SCmd.addCommand("Info", send_info);
-  SCmd.addCommand("Pos", send_position);
   SCmd.addCommand("Ready", check_move_complete);
   SCmd.addCommand("Position", check_position);
   SCmd.addCommand("completed?", is_complete);
@@ -81,7 +82,11 @@ void setup() {
 
 }
 void runSteppers(void) {
-  msteppers.run();  
+
+  for (int i = 0; i < 3; i++) {
+    steppers[i].run(); 
+  }
+
 }
 
 void loop() {
@@ -109,13 +114,8 @@ void send_info() {
   Serial.println("Hanging Arm");
 }
 
-void send_position() {
-  Serial.println("Hanging Arm");
-}
-
 void limitswitch(){
 
-  // rewrite this?
   if (tempHoming == 0){
     if (digitalRead(limitSwitch_x) == 1 && digitalRead(limitSwitch_a) == 1) 
       {
@@ -127,17 +127,44 @@ void limitswitch(){
         stop_spec(1);
         steppers[1].setCurrentPosition(0);
       }
+    if (digitalRead(limitSwitch_z) == 1) 
+      {
+        stop_spec(2);
+        steppers[2].setCurrentPosition(0);
+      }
   }
   if (tempHoming == 1){
     if (digitalRead(limitSwitch_x) == 1 && digitalRead(limitSwitch_a) == 1) 
       {
         stop_spec(0);
         steppers[0].setCurrentPosition(0);
-        stepperPos[0] = 50;
-        msteppers.moveTo(stepperPos);
+        steppers[0].moveTo(10);
         delay(100);
-        tempHoming = 0; 
+        int lockx = 1;
       }
+    if (digitalRead(limitSwitch_y) == 1)
+      {
+        stop_spec(1);
+        steppers[1].setCurrentPosition(0);
+        steppers[1].moveTo(10);
+        delay(100);
+        int locky = 1;
+      }
+    if (digitalRead(limitSwitch_z) == 1)
+      {
+        stop_spec(2);
+        steppers[2].setCurrentPosition(0);
+        steppers[2].moveTo(4);
+        delay(100);
+        int lockz = 1;
+      }
+    
+    if (lockx == 1 && locky == 1 && lockz == 1){
+      tempHoming = 0;
+      lockx = 0;
+      locky = 0;
+      lockz = 0;
+    }
       }
 }
 
@@ -163,6 +190,29 @@ void change_velocity()    //function called when a Serial command is received
   }
 
 }
+
+void change_acceleration() {
+  char *arg;
+  int acceleration;
+
+  arg = SCmd.next();
+  if (arg == NULL) {
+    Serial.println("Not recognized: No Acceleration given");
+    return;
+  }
+
+  acceleration = atoi(arg);
+  if (acceleration == 0) {
+    Serial.println("Not recognized: Acceleration parameter could not get parsed");
+    return;
+  }
+
+  for (int i = 0; i < 3; i++) {
+    steppers[i].setAcceleration(acceleration);
+  }
+}
+
+
 
 void check_move_complete() {
 
@@ -198,14 +248,8 @@ void stop_all() {
 void homing(){
   Serial.println("Home, x and y use -100000, other joints need angle turned to original reference (to be determined)");
   for (int i = 0; i < 3; i++) {steppers[i].move(-100000);}
-  }
-
-void homie(){
-  Serial.println("Homie is is for x and a");
-  stepperPos[0] = -100000;
-  msteppers.moveTo(stepperPos);
   tempHoming = 1;
-}
+  }
 
 void homingZ() {
   Serial.println("Homing x, y and z using move -100000");  // check dir
@@ -225,7 +269,6 @@ void move_stepper() {
   double steps;
 
   arg = SCmd.next();
-  Serial.println(arg);
 
   if (arg == NULL)  {Serial.println("Not recognized: Stepper Number" );
                       return;}
@@ -249,12 +292,11 @@ void move_stepper() {
 
   Serial.print("moving ");
   Serial.println(angle);
+  Serial.println(step_idx);
   steps = angle;  // if sensors implemented then convert(angle, step_idx)
-  stepperPos[step_idx] = steps;
   //TODO FIX angle parameter and set up a limiter factor
   b_move_complete = false;
-
-  msteppers.moveTo(stepperPos);
+  steppers[step_idx].moveTo(steps);
 }
 
 double convert(double angle, int i) {double steps;
