@@ -9,12 +9,11 @@
 SerialCommand SCmd;                                 // The SerialCommand object
 //Sensors sensors;
 //Controller controller;
-AccelStepper newStepper(int stepPin, int dirPin, int enablePin) {
+AccelStepper newStepper(int stepPin, int dirPin, int enablePin, int maxSpeed) {
   AccelStepper stepper = AccelStepper(stepper.DRIVER, stepPin,dirPin);
   stepper.setEnablePin(enablePin);
   stepper.setPinsInverted(false,false,true);
-  stepper.setMaxSpeed(500);
-  stepper.setAcceleration(1000);
+  stepper.setMaxSpeed(maxSpeed);
   stepper.enableOutputs();
   return stepper;
 }
@@ -46,9 +45,9 @@ long stepperPos[3] = {0, 0, 0};
 long stepsPerFullTurn[3] = {16000, 16000, 16000};
 
 void setup() {
-  steppers[0] = newStepper(2,5,8);
-  steppers[1] = newStepper(3,6,8);
-  steppers[2] = newStepper(4,7,8);
+  steppers[0] = newStepper(2,5,8, 2000);
+  steppers[1] = newStepper(3,6,8, 1500);
+  steppers[2] = newStepper(4,7,8, 1500);
 
   pinMode(8, OUTPUT);     //enable pin 8 hardcoden in pinMode
   digitalWrite(8, LOW);
