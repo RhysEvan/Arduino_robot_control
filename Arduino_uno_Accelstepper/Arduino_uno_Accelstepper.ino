@@ -19,10 +19,9 @@ AccelStepper newStepper(int stepPin, int dirPin, int enablePin, int maxSpeed, in
   return stepper;
 }
 
-
-AccelStepper steppers[3];
-
-// MultiStepper msteppers;
+// PUT THE NUMBER OF MOTORS YOU HAVE HERE:
+const int MotorCount = 3;
+AccelStepper steppers[MotorCount];
 
 int uddir = 1;
 int tempHoming = 0;   //maakt variabelen voor homing te cheken zodat het trager voor en achteruit gaat
@@ -37,13 +36,14 @@ const byte limitSwitch_z = 12;  //pin for the limitswitch on CNC shield NC (Pull
 bool switchFlipped = false; //stores the status for flipping
 bool previousFlip = true; //stores the previous state for flipping - needed for the direction change
 
-int lockx = 0;    //maak een set reset variable voor motoren
-int locka = 0;    // a en x zijn de motoren beneden
-int locky = 0;    // motor voor links rechts
-int lockz = 0;    // motor voor camera
+int lockx = 0;    //make a set/reset variable for the motors
+int locka = 0;    // a and x are the motors at the bottom
+int locky = 0;    // motor to go left and right
+int lockz = 0;    // motor for the camera
 
-long stepperPos[3] = {0, 0, 0};
-long stepsPerFullTurn[3] = {16000, 16000, 16000};
+
+long stepperPos[MotorCount] = {0, 0, 0};
+long stepsPerFullTurn[MotorCount] = {16000, 16000, 16000};
 
 void setup() {
   // newStepper(int stepPin, int dirPin, int enablePin, int maxSpeed, int Acceleration)
@@ -53,8 +53,6 @@ void setup() {
 
   pinMode(8, OUTPUT);     //enable pin 8 hardcoden in pinMode
   digitalWrite(8, LOW);
-
-  // for (int i = 0; i < 3; i++){msteppers.addStepper(steppers[i]);}
 
   pinMode(limitSwitch_x, INPUT_PULLUP);
   pinMode(limitSwitch_a, INPUT_PULLUP);
@@ -83,7 +81,7 @@ void setup() {
 }
 void runSteppers(void) {
 
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < MotorCount; i++) {
     steppers[i].run(); 
   }
 
@@ -93,7 +91,7 @@ void loop() {
   SCmd.readSerial(); 
   limitswitch();
   if (millis() - lastMillis > 10) {
-    for (int i=0; i<3; i++) {
+    for (int i=0; i<MotorCount; i++) {
       //double sensorPosition = convert(sensors.getAngle(i), i);
       //double motorPosition = steppers[i].currentPosition();
       //steppers[i].setCurrentPosition((0.9*motorPosition + 0.1*sensorPosition));
@@ -185,7 +183,7 @@ void change_velocity()    //function called when a Serial command is received
     return;
   }
   Serial.println(velocity);
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < MotorCount; i++) {
     steppers[i].setMaxSpeed(velocity);
   }
 
@@ -207,7 +205,7 @@ void change_acceleration() {
     return;
   }
 
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < MotorCount; i++) {
     steppers[i].setAcceleration(acceleration);
   }
 }
@@ -222,7 +220,7 @@ void check_move_complete() {
   }
 
   bool b_all_done = true;
-  for (int i = 0; i <= 3; i++) {
+  for (int i = 0; i <= MotorCount; i++) {
     if (steppers[i].distanceToGo() > 0) {
       b_all_done = false;
     }
@@ -241,13 +239,13 @@ void check_move_complete() {
 void stop_all() {
   Serial.println("stopping");
 
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < MotorCount; i++) {
     stop_spec(i);
   }
 }
 void homing(){
   Serial.println("Home, x and y use -100000, other joints need angle turned to original reference (to be determined)");
-  for (int i = 0; i < 3; i++) {steppers[i].move(-100000);}
+  for (int i = 0; i < MotorCount; i++) {steppers[i].move(-100000);}
   tempHoming = 1;
   }
 
@@ -273,12 +271,19 @@ void move_stepper() {
   if (arg == NULL)  {Serial.println("Not recognized: Stepper Number" );
                       return;}
 
+  // checks the stepper index (motor can do weird stuff if you go over the motorcount)
   step_idx = atoi(arg);
+  if (step_idx < 0 || step_idx >= MotorCount) {
+    Serial.println("Not recognized: Invalid Stepper Index, pleas restart if unstable");
+    Serial.print("Unrecognized index is: ");   Serial.println(step_idx);
+    return;
+  }
 
-  if (step_idx < 0) {
-    Serial.print("Not recognized:");   Serial.println(step_idx);  return;
-    Serial.print("ID ");
-    Serial.print(step_idx);}
+// Function above should do this but better. If it indeed works, delete commented func -- Ya boy, Juicy Potat
+  // if (step_idx < 0) {
+  //   Serial.print("Not recognized:");   Serial.println(step_idx);  return;
+  //   Serial.print("ID ");
+  //   Serial.print(step_idx);}
 
   arg = SCmd.next();
 
@@ -304,7 +309,7 @@ double convert(double angle, int i) {double steps;
                             return steps;}
 
 void is_complete() {
-  for (int i = 0; i < 3; i++){
+  for (int i = 0; i < MotorCount; i++){
     if (steppers[i].distanceToGo() == 0)  {continue;}
     else  {return;}
   }
@@ -314,6 +319,6 @@ void is_complete() {
 
 void check_position() {
   //TODO have it memorize the angles measured by the magnets
-  for (int i = 0; i < 3; i++){stepperPos[i] = steppers[i].currentPosition();}
+  for (int i = 0; i < MotorCount; i++){stepperPos[i] = steppers[i].currentPosition();}
   Serial.println(String(stepperPos[0]) + " " + String(stepperPos[1]) + " " + String(stepperPos[2]));
 }
