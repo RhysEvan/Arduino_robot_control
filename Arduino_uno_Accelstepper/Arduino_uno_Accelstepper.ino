@@ -144,7 +144,7 @@ void limitswitch(){
 void change_velocity()    //function called when a Serial command is received
 {
   char *arg;
-  float velocity;
+  int velocity;
 
   arg = SCmd.next();
   if (arg == NULL) {
@@ -157,8 +157,8 @@ void change_velocity()    //function called when a Serial command is received
     Serial.println("Not recognized: Velocity parameter could not get parsed");
     return;
   }
-
-  for (int i = 0; i <= 3; i++) {
+  Serial.println(velocity);
+  for (int i = 0; i < 3; i++) {
     steppers[i].setMaxSpeed(velocity);
   }
 
@@ -225,6 +225,7 @@ void move_stepper() {
   double steps;
 
   arg = SCmd.next();
+  Serial.println(arg);
 
   if (arg == NULL)  {Serial.println("Not recognized: Stepper Number" );
                       return;}
