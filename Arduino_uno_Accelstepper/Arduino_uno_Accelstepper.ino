@@ -136,15 +136,17 @@ void limitswitch(){
       {
         stop_spec(0);
         steppers[0].setCurrentPosition(0);
-        steppers[0].moveTo(10);
+        steppers[0].moveTo(400);
         delay(100);
         int lockx = 1;
       }
     if (digitalRead(limitSwitch_y) == 1)
       {
         stop_spec(1);
+        Serial.println("y is stopping");
+        Serial.println(String(digitalRead(limitSwitch_y)));
         steppers[1].setCurrentPosition(0);
-        steppers[1].moveTo(10);
+        steppers[1].moveTo(200);
         delay(100);
         int locky = 1;
       }
@@ -152,7 +154,7 @@ void limitswitch(){
       {
         stop_spec(2);
         steppers[2].setCurrentPosition(0);
-        steppers[2].moveTo(4);
+        steppers[2].moveTo(120);
         delay(100);
         int lockz = 1;
       }
@@ -253,7 +255,7 @@ void homingZ() {
   Serial.println("Homing x, y and z using move -100000");  // check dir
   
   if (digitalRead(limitSwitch_z) == 0) {
-    steppers[2].move(100000);
+    steppers[2].move(1000000);
   }
 }
 
